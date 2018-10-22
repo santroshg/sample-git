@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"crossorigin="anonymous" />
+        <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+        <link rel="stylesheet" href="styles/main.css" />
+
+    </head>
+    <body>
+
+    <div id="container">
+        <form name="github-user-form" id="github-user-form" method="POST" class="form-inline">
+            <input type="text" name="github-user" id="github-user" class="form-control" placeholder="Enter Github Username "/>
+            <span className="input-group-btn">
+                <button type="submit" class="btn btn-primary mb-2">Submit </button>
+            </span>
+
+        </form>
+
+        <div id="loader" style="display: none;">Loading...</div>
+        <div id="repositories"></div>
+
+        <div id="issue-form-container" style="display: none;" title="Create New Issue">
+                <form id="issue-form">
+                    <div class="msg"></div>
+                     <h3> Repository: <span data-type="repo-title"></span></h3>
+                    <div class="form-group">
+                        <label for="issue-title">Title</label>
+                        <input name="title" type="text" class="form-control" id="issue-title" placeholder="">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="issue-description">Description</label>
+                        <textarea name="body" class="form-control" id="issue-description" rows="3" id="issue-description"></textarea>
+                    </div>
+
+                </form>
+        </div>
+    </div>
+
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+        <script type="text/javascript" src="https://cdn.rawgit.com/oauth-io/oauth-js/c5af4519/dist/oauth.js"></script>
+        <script type="text/javascript" src="scripts/main.js"></script>
+    </body>
+</html>
