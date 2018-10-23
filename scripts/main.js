@@ -10,28 +10,52 @@ var GH = GH || {};
       GRepo.init();
     };
 
+
     var uiSelectors = {
         form: $("#github-user-form"),
-        dataContainer:  $("#repositories"),
+        repositoriesContainer:  $("#repositories"),
         usernameInput:  $('#github-user'),
         loader: $("#loader"),
         issueFormContainer:  $( "#issue-form-container" ),
         createIssueSelectorClass: 'create-issue',
         msgClass: 'msg'
     };
-    var OAUTH_TOKEN = 'a98e9fe80726d80198479c6771152010b92d3454',
-        Client_ID = '75b7af763bf555da49f6',
-        Client_Secret = '9247cd138e7349e349baa5b9aa5727f2f4c4447d',
-        repouri = 'https://api.github.com/users/{username}/repos?client_id='+Client_ID+'&client_secret='+Client_Secret,
+
+    var OAUTH_TOKEN = 'pnIgwqpas4CLsY8E1Q0lQz5maFw',
+        //Client_ID = '75b7af763bf555da49f6',
+        //Client_Secret = '9247cd138e7349e349baa5b9aa5727f2f4c4447d',
+        repouri = 'https://api.github.com/users/{username}/repos',
         createIssueUri = 'https://api.github.com/repos/{owner}/{repo}/issues',
         provider = 'github';
+
+    var oAuthHandler = {
+        accessToken: null,
+
+        init: function(provider, OAUTH_TOKEN) {
+            OAuth.initialize(OAUTH_TOKEN);
+            this.provider = provider;
+            return this;
+        },
+
+        authorize: function(callback, ele) {
+            var _this = this;
+            OAuth.popup(this.provider, {cache: false})
+            .done(function(result) {
+                console.log(result);
+                _this.accessToken = result.access_token;
+                callback(ele);
+            })
+            .fail(function (err) {
+                console.log("Token Authorization Error");
+            });
+        }
+
+    };
 
     var GRepo = {
         init: function() {
             this.bindEvents();
-            OAuth.initialize(APP_KEY);
-            this.provider = provider;
-          //  this.oAuthHandler = oAuthHandler.init(provider, OAUTH_TOKEN);
+            this.oAuthHandler = oAuthHandler.init(provider, OAUTH_TOKEN);
         },
 
         bindEvents: function() {
@@ -51,18 +75,28 @@ var GH = GH || {};
         getGHRepoData: function (url, callback) {
             var _this = this;
             uiSelectors.loader.show();
-            uiSelectors.dataContainer.html("");
-            $.getJSON(url, function(json){
-                callback.call(null, json);
-                uiSelectors.loader.hide();
-            }).fail(function() {
-                _this.onFailure();
-                uiSelectors.loader.hide();
-            });
+            uiSelectors.repositoriesContainer.html("");
+            OAuth.popup('github').done(function(result) {
+
+                $.ajax({
+                  headers: {"Authorization": "token " + result.access_token},
+                  url: url,
+                  dataType: 'json',
+                  //data: data,
+                  success: function(json) {
+                    callback.call(null, json);
+                    uiSelectors.loader.hide();
+                  },
+                  error: function() {
+                    _this.onFailure();
+                    uiSelectors.loader.hide();
+                  }
+              });
+            })
         },
 
         onFailure: function() {
-            uiSelectors.dataContainer.html("No repository found!");
+            uiSelectors.repositoriesContainer.html("No repository found!");
         },
 
         renderRepoData: function(repositories) {
@@ -73,12 +107,11 @@ var GH = GH || {};
 
             var html = ' <ul class="list-group">';
             $.each(repositories, function(index) {
-                html +=  '<li class="list-group-item"><h4 class"mb-1"><a href="'+repositories[index].html_url+'" target="_blank">'+repositories[index].name + '</a>  <button class="btn btn-warning pull-right create-issue" data-name='+repositories[index].name+'>Create Issue</button> </h4></li>';
+                html +=  '<li class="list-group-item"><h4 class"mb-1"><a href="'+repositories[index].html_url+'" target="_blank">'+repositories[index].name + '</a>  <button class="btn btn-warning pull-right create-issue" data-name='+repositories[index].name+'>New Issue</button> </h4></li>';
             });
             html += '</ul>';
-            uiSelectors.dataContainer.html(html);
+            uiSelectors.repositoriesContainer.html(html);
             this.addEventToCreateIssue();
-            //console.log(repositories);
         },
 
         addEventToCreateIssue: function() {
@@ -98,7 +131,7 @@ var GH = GH || {};
                 width: 750,
                 modal: true,
                 buttons: {
-                  "Create Issue": function() {
+                  "Submit New Issue": function() {
                     _this.createIssue(_this.dialog.form.selectedEle);
                   },
                   Cancel: function() {
@@ -123,7 +156,7 @@ var GH = GH || {};
             var _this = this;
             $.ajax({
                type: "POST",
-               headers: {"Authorization": "token " + OAUTH_TOKEN},
+                headers: {"Authorization": "token " + this.oAuthHandler.accessToken},
                 url: url,
                 data: formData,
                 success: function() {
@@ -141,7 +174,7 @@ var GH = GH || {};
         },
 
         createIssueHandler: function(ele) {
-            this.showIssueForm(ele);
+            this.oAuthHandler.authorize(this.showIssueForm.bind(this), ele);
         },
 
         showIssueForm: function(ele) {
