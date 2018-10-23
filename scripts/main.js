@@ -10,7 +10,7 @@ var GH = GH || {};
       GRepo.init();
     };
 
-    var selectors = {
+    var uiSelectors = {
         form: $("#github-user-form"),
         dataContainer:  $("#repositories"),
         usernameInput:  $('#github-user'),
@@ -19,22 +19,26 @@ var GH = GH || {};
         createIssueSelectorClass: 'create-issue',
         msgClass: 'msg'
     };
-    var repouri = 'https://api.github.com/users/{username}/repos',
+    var OAUTH_TOKEN = 'a98e9fe80726d80198479c6771152010b92d3454',
+        Client_ID = '75b7af763bf555da49f6',
+        Client_Secret = '9247cd138e7349e349baa5b9aa5727f2f4c4447d',
+        repouri = 'https://api.github.com/users/{username}/repos?client_id='+Client_ID+'&client_secret='+Client_Secret,
         createIssueUri = 'https://api.github.com/repos/{owner}/{repo}/issues',
-        GITHUB_APP_KEY = 'B11a8xkp0WMxInG2Hivp6d8C-Pc',
         provider = 'github';
 
     var GRepo = {
         init: function() {
             this.bindEvents();
-            this.oAuthHandler = oAuthHandler.init(provider, GITHUB_APP_KEY);
+            OAuth.initialize(APP_KEY);
+            this.provider = provider;
+          //  this.oAuthHandler = oAuthHandler.init(provider, OAUTH_TOKEN);
         },
 
         bindEvents: function() {
             var _this = this;
-            $(selectors.form).submit(function(e) {
+            $(uiSelectors.form).submit(function(e) {
                 e.preventDefault();
-                _this.getRepositories(selectors.usernameInput.val());
+                _this.getRepositories(uiSelectors.usernameInput.val());
             });
 
             this.issueFormHandler();
@@ -46,19 +50,19 @@ var GH = GH || {};
 
         getGHRepoData: function (url, callback) {
             var _this = this;
-            selectors.loader.show();
-            selectors.dataContainer.html("");
+            uiSelectors.loader.show();
+            uiSelectors.dataContainer.html("");
             $.getJSON(url, function(json){
                 callback.call(null, json);
-                selectors.loader.hide();
+                uiSelectors.loader.hide();
             }).fail(function() {
                 _this.onFailure();
-                selectors.loader.hide();
+                uiSelectors.loader.hide();
             });
         },
 
         onFailure: function() {
-            selectors.dataContainer.html("No repository found!");
+            uiSelectors.dataContainer.html("No repository found!");
         },
 
         renderRepoData: function(repositories) {
@@ -72,14 +76,14 @@ var GH = GH || {};
                 html +=  '<li class="list-group-item"><h4 class"mb-1"><a href="'+repositories[index].html_url+'" target="_blank">'+repositories[index].name + '</a>  <button class="btn btn-warning pull-right create-issue" data-name='+repositories[index].name+'>Create Issue</button> </h4></li>';
             });
             html += '</ul>';
-            selectors.dataContainer.html(html);
+            uiSelectors.dataContainer.html(html);
             this.addEventToCreateIssue();
             //console.log(repositories);
         },
 
         addEventToCreateIssue: function() {
             var _this = this;
-            $("."+selectors.createIssueSelectorClass).on("click", function(e) {
+            $("."+uiSelectors.createIssueSelectorClass).on("click", function(e) {
                 e.preventDefault();
                _this.createIssueHandler($(this));
 
@@ -88,7 +92,7 @@ var GH = GH || {};
 
         issueFormHandler: function(ele) {
             var _this = this;
-            _this.dialog = selectors.issueFormContainer.dialog({
+            _this.dialog = uiSelectors.issueFormContainer.dialog({
                 autoOpen: false,
                 height: 370,
                 width: 750,
@@ -103,23 +107,23 @@ var GH = GH || {};
                 },
                 close: function() {
                     _this.dialog.form [ 0 ].reset();
-                    selectors.issueFormContainer.find("."+selectors.msgClass).html("");
+                    uiSelectors.issueFormContainer.find("."+uiSelectors.msgClass).html("");
                 }
             });
 
-            _this.dialog.form = selectors.issueFormContainer.find( "form" ).on( "submit", function( event ) {
+            _this.dialog.form = uiSelectors.issueFormContainer.find( "form" ).on( "submit", function( event ) {
                 event.preventDefault();
                 _this.createIssue(_this.dialog.form.selectedEle);
             });
         },
 
         createIssue: function(ele) {
-            var url = createIssueUri.replace('{owner}', selectors.usernameInput.val()).replace('{repo}', ele.data('name'));
+            var url = createIssueUri.replace('{owner}', uiSelectors.usernameInput.val()).replace('{repo}', ele.data('name'));
             var formData = JSON.stringify({title: this.dialog.form.get(0).title.value, body: this.dialog.form.get(0).body.value});
             var _this = this;
             $.ajax({
                type: "POST",
-               headers: {"Authorization": "token " + this.oAuthHandler.accessToken},
+               headers: {"Authorization": "token " + OAUTH_TOKEN},
                 url: url,
                 data: formData,
                 success: function() {
@@ -130,18 +134,18 @@ var GH = GH || {};
 
         afterCreatIssueSuccess: function() {
             var _this = this;
-            selectors.issueFormContainer.find("."+selectors.msgClass).html("Issue created Successfully!");
+            uiSelectors.issueFormContainer.find("."+uiSelectors.msgClass).html("Issue created Successfully!");
             setTimeout(function() {
                 _this.dialog.dialog("close");
             }, 2000);
         },
 
         createIssueHandler: function(ele) {
-            this.oAuthHandler.authorize(this.showIssueForm.bind(this), ele);
+            this.showIssueForm(ele);
         },
 
         showIssueForm: function(ele) {
-            selectors.issueFormContainer.find("[data-type=repo-title]").html(ele.data('name'));
+            uiSelectors.issueFormContainer.find("[data-type=repo-title]").html(ele.data('name'));
             this.dialog.dialog( "open" );
             this.dialog.form.selectedEle = ele;
         },
@@ -150,35 +154,6 @@ var GH = GH || {};
             return repouri.replace('{username}', username);
         }
     };
-
-
-    var oAuthHandler = {
-        accessToken: null,
-
-        init: function(provider, APP_KEY) {
-            OAuth.initialize(APP_KEY);
-            this.provider = provider;
-            return this;
-        },
-
-        authorize: function(callback, ele) {
-            //Using popup (option 1)
-            var _this = this;
-            OAuth.popup(this.provider, {cache: true})
-            .done(function(result) {
-                console.log(result);
-                _this.accessToken = result.access_token;
-                callback(ele);
-                // do some stuff with result
-            })
-            .fail(function (err) {
-                console.log("fail");
-            //handle error with err
-            });
-        }
-
-    };
-
-    ns.init();
+  ns.init();
 
 })(window.jQuery, GH);
